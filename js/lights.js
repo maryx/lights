@@ -1,64 +1,79 @@
+// The camera always looks at (0, 0, -1).
+
 const COLS = 100; // x, default 100
-const ROWS = 120; // z, default 100
-const LIGHT_HEIGHT = 200;
-const RENDER_RATE = 500;
+const ROWS = 100; // y, default 100
+const LIGHT_HEIGHT = 0; // 200 m in the air
+const RENDER_RATE = 5000;
 const SEED_FREQUENCY = 3; // default 3
 const ALGORITHM_NUM = getRandomNumber();
 const ROW_PADDING = 5;
 const PADDING = 70;
 const BUILDING_DEPTH = 40;
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
-
+const camera = new THREE.PerspectiveCamera(45 /*angle*/, window.innerWidth/window.innerHeight /*aspect ratio*/, 1 /*near*/, 1000 /*far*/);
 const renderer = new THREE.WebGLRenderer();
-renderer.setSize( window.innerWidth, window.innerHeight );
-document.body.appendChild( renderer.domElement );
+
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+document.addEventListener('wheel', scroll, false);
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 
 var concreteMaterial = new THREE.MeshBasicMaterial({color: 0x302b1e});
 
-var roofGeometry = new THREE.BoxGeometry(COLS+PADDING, BUILDING_DEPTH, ROWS+ROW_PADDING);
-var roof = new THREE.Mesh(roofGeometry, concreteMaterial);
-roof.position.x = COLS/2;
-roof.position.y = LIGHT_HEIGHT + BUILDING_DEPTH/2;
-roof.position.z = ROWS/2;
-scene.add(roof);
+// var roofGeometry = new THREE.BoxGeometry(COLS+PADDING, BUILDING_DEPTH, ROWS+ROW_PADDING);
+// var roof = new THREE.Mesh(roofGeometry, concreteMaterial);
+// roof.position.x = COLS/2;
+// roof.position.y = LIGHT_HEIGHT + BUILDING_DEPTH/2;
+// roof.position.z = ROWS/2;
+// scene.add(roof);
 
-var sideGeometry = new THREE.BoxGeometry(30, LIGHT_HEIGHT, 20);
-var leftSide = new THREE.Mesh(sideGeometry, concreteMaterial);
-leftSide.position.x = -5;
-leftSide.position.y = LIGHT_HEIGHT/2 + 30;
-leftSide.position.z = ROWS;
-scene.add(leftSide);
+// var sideGeometry = new THREE.BoxGeometry(30, LIGHT_HEIGHT, 20);
+// var leftSide = new THREE.Mesh(sideGeometry, concreteMaterial);
+// leftSide.position.x = -5;
+// leftSide.position.y = LIGHT_HEIGHT/2 + 30;
+// leftSide.position.z = ROWS;
+// scene.add(leftSide);
 
-var rightSide = new THREE.Mesh(sideGeometry, concreteMaterial);
-rightSide.position.x = COLS + 5;
-rightSide.position.y = LIGHT_HEIGHT/2 + 30;
-rightSide.position.z = ROWS;
-scene.add(rightSide);
+// var rightSide = new THREE.Mesh(sideGeometry, concreteMaterial);
+// rightSide.position.x = COLS + 5;
+// rightSide.position.y = LIGHT_HEIGHT/2 + 30;
+// rightSide.position.z = ROWS;
+// scene.add(rightSide);
 
-var backGeometry = new THREE.BoxGeometry(COLS+PADDING, LIGHT_HEIGHT+BUILDING_DEPTH, 100);
-var back = new THREE.Mesh(backGeometry, concreteMaterial);
-back.position.x = COLS/2;
-back.position.y = 150;
-back.position.z = ROWS-200;
-scene.add(back);
+// var backGeometry = new THREE.BoxGeometry(COLS+PADDING, LIGHT_HEIGHT+BUILDING_DEPTH, 100);
+// var back = new THREE.Mesh(backGeometry, concreteMaterial);
+// back.position.x = COLS/2;
+// back.position.y = 150;
+// back.position.z = ROWS-200;
+// scene.add(back);
 
 
-const geometry = new THREE.OctahedronGeometry(0.3, 0);
+const octahedron = new THREE.OctahedronGeometry(0.3, 0);
 var lights = [];
-for (var i = 0; i < COLS; i++) {
+for (var i = -COLS/2; i < COLS/2; i++) { // start with an offset so lights are centered
     var lightCol = [];
-    for (var j = 0; j < ROWS; j++) {
-        var material = new THREE.PointCloudMaterial( { color: getColor(i), opacity: 0.6 } );
-        var light = new THREE.Mesh(geometry, material);
+    for (var j = -ROWS/2; j < ROWS/2; j++) { // start with an offset
+        var material = new THREE.PointsMaterial({ color: getColor(i), opacity: 0.6 });
+        var light = new THREE.Mesh(octahedron, material);
         light.position.x = i;
-        light.position.y = LIGHT_HEIGHT;
-        light.position.z = j;
+        light.position.y = j;
+        light.position.z = LIGHT_HEIGHT;
         lightCol.push(light);
     }
     lights.push(lightCol);
 }
+
+
+var origin = new THREE.Vector3(0, 0, 0);
+var xend = new THREE.Vector3(50, 0, 0);
+var yend = new THREE.Vector3(0, 100, 0);
+var zend = new THREE.Vector3(50, 50, 150);
+var lineThing = new THREE.Geometry();
+lineThing.vertices.push(origin, xend);
+lineThing.vertices.push(origin, yend);
+lineThing.vertices.push(origin, zend);
+var line = new THREE.Line(lineThing);
+scene.add(line);
 
 lights.forEach(function(lightCol) {
     lightCol.forEach(function(light) {
@@ -66,9 +81,12 @@ lights.forEach(function(lightCol) {
     });
 });
 
-camera.position.z = 500;
-camera.position.y = 30;
-camera.position.x = 50;
+camera.position.x = 0;//50; // you're in the middle of the art
+camera.position.y = 0;//30; // you're in the middle of the art
+camera.position.z = 120;//500; //you're ground level
+console.log(camera.getWorldDirection());
+
+console.log(camera.getWorldDirection());
 
 var algorithm = function(){
     return;
@@ -88,6 +106,7 @@ const render = function () {
     requestAnimationFrame(render);
     controls.update();
     renderer.render(scene, camera);
+//    console.log(camera.getWorldDirection());
 };
 
 //gliderGun();
@@ -365,3 +384,9 @@ function getColor(i) {
     // default: return 0xFF5566;
     // }
 };
+
+function scroll(event) {
+    event.preventDefault();
+    camera.position.x += event.deltaX/100;
+    camera.position.z += event.deltaY/100; 
+}
