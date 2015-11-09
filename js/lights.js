@@ -3,7 +3,7 @@
 const COLS = 100; // x, default 100
 const ROWS = 100; // y, default 100
 const LIGHT_HEIGHT = 0; // 200 m in the air
-const RENDER_RATE = 5000;
+const RENDER_RATE = 500;
 const SEED_FREQUENCY = 3; // default 3
 const ALGORITHM_NUM = getRandomNumber();
 const ROW_PADDING = 5;
@@ -12,6 +12,11 @@ const BUILDING_DEPTH = 40;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45 /*angle*/, window.innerWidth/window.innerHeight /*aspect ratio*/, 1 /*near*/, 1000 /*far*/);
 const renderer = new THREE.WebGLRenderer();
+const positiveBound = 100;
+const negativeBound = 0;
+
+var dropX = getRandomNumber(-50, 50);
+var dropY = getRandomNumber(-50, 50);
 
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
@@ -53,7 +58,7 @@ var lights = [];
 for (var i = -COLS/2; i < COLS/2; i++) { // start with an offset so lights are centered
     var lightCol = [];
     for (var j = -ROWS/2; j < ROWS/2; j++) { // start with an offset
-        var material = new THREE.PointsMaterial({ color: getColor(i), opacity: 0.6 });
+        var material = new THREE.PointsMaterial({ color: getColor(i), opacity: 0.2 });
         var light = new THREE.Mesh(octahedron, material);
         light.position.x = i;
         light.position.y = j;
@@ -62,7 +67,6 @@ for (var i = -COLS/2; i < COLS/2; i++) { // start with an offset so lights are c
     }
     lights.push(lightCol);
 }
-
 
 var origin = new THREE.Vector3(0, 0, 0);
 var xend = new THREE.Vector3(50, 0, 0);
@@ -84,18 +88,23 @@ lights.forEach(function(lightCol) {
 camera.position.x = 0;//50; // you're in the middle of the art
 camera.position.y = 0;//30; // you're in the middle of the art
 camera.position.z = 120;//500; //you're ground level
-console.log(camera.getWorldDirection());
-
-console.log(camera.getWorldDirection());
 
 var algorithm = function(){
-    return;
-//    return gameOfLife();
-    // if (ALGORITHM_NUM % 2 === 0) {
-    //     return gameOfLife();
-    // } else {
-    //     return onOff();
-    // }
+    var choice = ALGORITHM_NUM % 4;
+    switch (0) {
+    case 0:
+        console.log("game of life")
+        return gameOfLife();
+    case 1:
+        console.log("drop in water")
+        return dropInWater(getRandomNumber(3, 10));
+    case 2:
+        console.log("glider gun")
+        return gliderGun();
+    default:
+        console.log("on off")
+        return onOff();
+    }
 };
 
 setInterval(function(){
@@ -106,14 +115,26 @@ const render = function () {
     requestAnimationFrame(render);
     controls.update();
     renderer.render(scene, camera);
-//    console.log(camera.getWorldDirection());
 };
 
-//gliderGun();
-onOff(SEED_FREQUENCY); // Get a random alignment first
+//onOff(SEED_FREQUENCY); // Get a random alignment first
+gliderGun(); // This needs to be the first frame, and the rest needs to be game of life
 render();
 
+function dropInWater(dropSize) {
+    lights.forEach(function(lightCol) {
+        lightCol.forEach(function(light) {
+            if (getDistance(dropX, dropY, light.position.x, light.position.y) % dropSize === 0) {
+                light.material.visible = true;
+            } else {
+                light.material.visible = false;
+            }
+        });
+    });
+}
+
 function gliderGun() {
+    var ROWS = 50;
     lights.forEach(function(lightCol) {
         lightCol.forEach(function(light) {
             // First square
@@ -248,8 +269,8 @@ function gameOfLife() {
     });
     lights.forEach(function(lightCol) {
         lightCol.forEach(function(light) {
-            var x = light.position.x;
-            var y = light.position.y;
+            var x = light.position.x + 50; // cuz we shifted stuff
+            var y = light.position.y + 50; // cuz we shifted stuff
             var liveCells = getNorth(x, y) + getNorthEast(x, y) +
                 getEast(x, y) + getSouthEast(x, y) +
                 getSouth(x, y) + getSouthWest(x, y) +
@@ -305,65 +326,79 @@ function onOff(seed) {
     });
 }
 
+function getDistance(x, y, x2, y2) {
+    var dist = parseInt(Math.sqrt(Math.pow(x2-x, 2) + Math.pow(y2-y, 2)));
+    return dist;
+}
+
+// returns the angle the point is at
+function getAngle(x, y, a, b) {
+    var angle = Math.sin(b-y / a-x);
+    return angle;
+}
+
 // returns 1 if the light is visible; else returns 0;
 // x is the column. y is the row
 function getNorth(x, y) {
-    if (y-1 < 0) {
+    if (y-1 < negativeBound) {
         return false;
     }
     return (lights[x][y-1].wasVisible);
 }
 
 function getNorthEast(x, y) {
-    if (x+1 >= COLS || y-1 < 0) {
+    if (x+1 >= positiveBound || y-1 < negativeBound) {
         return false;
     }
     return (lights[x+1][y-1].wasVisible);
 }
 
 function getEast(x, y) {
-    if (x+1 >= COLS) {
+    if (x+1 >= positiveBound) {
         return false;
     }
     return (lights[x+1][y].wasVisible);
 }
 
 function getSouthEast(x, y) {
-    if (x+1 >= COLS || y+1 >= ROWS) {
+    if (x+1 >= positiveBound || y+1 >= positiveBound) {
         return false
     }
     return (lights[x+1][y+1].wasVisible);
 }
 
 function getSouth(x, y) {
-    if (y+1 >= ROWS) {
+    if (y+1 >= positiveBound) {
         return false;
     }
     return (lights[x][y+1].wasVisible);
 }
 
 function getSouthWest(x, y) {
-    if (x-1 < 0 || y+1 >= ROWS) {
+    if (x-1 < negativeBound || y+1 >= positiveBound) {
         return false;
     }
     return (lights[x-1][y+1].wasVisible);
 }
 
 function getWest(x, y) {
-    if (x-1 < 0) {
+    if (x-1 < negativeBound) {
         return false;
     }
     return (lights[x-1][y].wasVisible);
 }
 
 function getNorthWest(x, y) {
-    if (x-1 < 0 || y-1 < 0) {
+    if (x-1 < negativeBound || y-1 < negativeBound) {
         return false;
     }
     return (lights[x-1][y-1].wasVisible);
 }
 
-function getRandomNumber() {
+function getRandomNumber(min, max) {
+    if (!!min || !!max) {
+        return Math.floor(Math.random() * (max - min)) + min;
+    }
     return Math.floor(Math.random() * 100);
 }
 
